@@ -1,7 +1,7 @@
 "use client";
 
 import L from "leaflet";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 
 export type PuntoMapa = {
@@ -37,19 +37,28 @@ function icono(p: PuntoMapa) {
 const iconoYo = L.divIcon({ className: "", iconSize: [0, 0], html: `<span class="pin pin-yo" title="Estás aquí"></span>` });
 
 /** Recalcula el tamaño del mapa cuando cambia el de su contenedor. */
-function AjusteTamano() {
+function AjusteTamano({ onCambio }: { onCambio: () => void }) {
   const map = useMap();
   useEffect(() => {
-    const obs = new ResizeObserver(() => map.invalidateSize());
+    const creado = Date.now();
+    const obs = new ResizeObserver(() => {
+      map.invalidateSize();
+      // En móvil el contenedor puede cambiar de ancho al cargar la página: si
+      // ocurre en los primeros segundos, se vuelve a encuadrar (no después,
+      // para no mover el mapa mientras alguien lo usa).
+      if (Date.now() - creado < 4000) onCambio();
+    });
     obs.observe(map.getContainer());
     return () => obs.disconnect();
-  }, [map]);
+  }, [map, onCambio]);
   return null;
 }
 
 /** Encuadra todos los puntos, o centra uno concreto y abre su ficha. */
-function Encuadre({ puntos, yo, enfocar, marcadores }: {
+function Encuadre({ puntos, yo, enfocar, marcadores, version }: {
   puntos: PuntoMapa[]; yo?: [number, number]; enfocar?: string; marcadores: React.RefObject<Record<string, L.Marker>>;
+  /** Cambia cuando hay que volver a encuadrar (p.ej. el contenedor cambió de tamaño) */
+  version: number;
 }) {
   const map = useMap();
   useEffect(() => {
@@ -64,7 +73,7 @@ function Encuadre({ puntos, yo, enfocar, marcadores }: {
     const coords: [number, number][] = puntos.map((x) => [x.latitud, x.longitud]);
     if (yo) coords.push(yo);
     if (coords.length) map.fitBounds(L.latLngBounds(coords), { padding: [40, 40], maxZoom: 15 });
-  }, [map, puntos, yo, enfocar, marcadores]);
+  }, [map, puntos, yo, enfocar, marcadores, version]);
   return null;
 }
 
@@ -76,6 +85,8 @@ export default function Mapa({ puntos, yo, nombreYo = "Estás aquí", enfocar, o
   alto?: string;
 }) {
   const marcadores = useRef<Record<string, L.Marker>>({});
+  const [version, setVersion] = useState(0);
+  const reencuadrar = useCallback(() => setVersion((v) => v + 1), []);
   return (
     <div className={`${alto} overflow-hidden rounded-2xl border border-line`}>
       <MapContainer center={[40.4168, -3.7038]} zoom={12} scrollWheelZoom className="h-full w-full">
@@ -115,8 +126,8 @@ export default function Mapa({ puntos, yo, nombreYo = "Estás aquí", enfocar, o
             <Popup>📍 {nombreYo}</Popup>
           </Marker>
         )}
-        <AjusteTamano />
-        <Encuadre puntos={puntos} yo={yo} enfocar={enfocar} marcadores={marcadores} />
+        <AjusteTamano onCambio={reencuadrar} />
+        <Encuadre puntos={puntos} yo={yo} enfocar={enfocar} marcadores={marcadores} version={version} />
       </MapContainer>
     </div>
   );

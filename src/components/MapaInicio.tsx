@@ -48,7 +48,7 @@ export function MapaInicio() {
   }));
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex min-w-0 flex-col gap-3">
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Restaurantes cerca de {UBICACION.nombre.replace("Puerta del ", "")}</h2>

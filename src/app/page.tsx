@@ -26,9 +26,10 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      {/* grid-cols-1 = minmax(0,1fr): en móvil la columna no se estira con el carrusel */}
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         {/* Modos */}
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <Link href="/buscar" className="group flex items-center gap-4 rounded-2xl border border-line bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand hover:shadow-md">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-3xl" aria-hidden>🔎</span>
             <span className="min-w-0 flex-1">
