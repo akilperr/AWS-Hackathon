@@ -62,6 +62,7 @@ const PROMPT_IA = `Eres un auditor de seguridad alimentaria. Clasifica cada caso
 - rojo: no apto, el riesgo está integrado en el plato (p.ej. carne en el ragú, harina en el rebozado, huevo crudo en la crema).
 
 Reglas:
+- Comprueba CADA restricción del comensal por separado: un plato solo es verde o amarillo si cumple TODAS. Un plato cuyo ingrediente principal es carne o pescado (p.ej. alitas de pollo) nunca es apto para vegetarianos ni veganos, aunque se retire la salsa.
 - Si no hay ingredientes, infiere los habituales de la receta tradicional y decide con ellos.
 - Embarazo: evitar lácteos sin pasteurizar, carne/pescado crudo o poco hecho, embutidos curados sin cocinar, huevo crudo o poco cocinado, alcohol que no se evapora, paté y foie. Embutido cocinado a alta temperatura (p.ej. chorizo a la plancha) es aceptable. Huevo frito, poché o a baja temperatura suele llevar la yema líquida: amarillo con "Pedir el huevo bien hecho, con la yema cuajada".
 - Si el riesgo depende de algo que no consta (tipo de caldo, si el queso es pasteurizado, si lleva vino) y NO es una alergia grave, elige amarillo con la pregunta concreta para el camarero ("Preguntar si el caldo es de verduras").
@@ -133,11 +134,20 @@ export async function auditarCarta(platos: Plato[], perfiles: Perfil[]): Promise
           pistas: d.pistas,
         }));
         try {
-          const { output } = await generateText({
-            model: getModel(),
-            output: Output.object({ schema: clasificacionIA }),
-            system: PROMPT_IA,
-            prompt: `Clasifica estos ${casos.length} casos. Devuelve un resultado por clave.\n${JSON.stringify(casos)}`,
+          const pedir = () =>
+            generateText({
+              model: getModel(),
+              output: Output.object({ schema: clasificacionIA }),
+              system: PROMPT_IA,
+              prompt: `Clasifica estos ${casos.length} casos. Devuelve un resultado por clave.\n${JSON.stringify(casos)}`,
+            });
+          // Un reintento tras una pausa breve: los fallos suelen ser picos pasajeros
+          // (p.ej. varias llamadas en paralelo a la vez); mejor esperar 1-2 s que
+          // marcar platos como "no verificados".
+          const { output } = await pedir().catch(async (e) => {
+            console.warn("[auditoria] lote fallido, se reintenta:", e instanceof Error ? e.message.split("\n")[0] : e);
+            await new Promise((r) => setTimeout(r, 1500));
+            return pedir();
           });
           for (const res of output.resultados) {
             const d = lote.find((x) => x.clave === res.clave);

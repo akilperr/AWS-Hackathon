@@ -36,7 +36,22 @@ const CASOS: [string, Restriccion, string][] = [
 ];
 
 const { data } = await supabaseServer().from("platos").select("*");
-const platos = data as Plato[];
+
+// Platos de una carta leída de una foto: muchas veces solo hay nombre y descripción
+const externo = (nombre: string, descripcion: string | null): Plato =>
+  ({ id: nombre, restaurante_id: "externo", nombre, categoria: "Entrante", descripcion, precio: null, ingredientes: [], alergenos_declarados: [], permite_modificacion: true, nota_cocina: null });
+const EXTERNOS = [
+  externo("Alitas de pollo", "con salsa sweet chili y paté saté"),
+  externo("Ensalada de tomate", "aguacate, aceite de aceituna, jamón ibérico y albahaca"),
+  externo("Bocadillo de calamares", null),
+];
+CASOS.push(
+  ["Alitas de pollo", "vegetariano", "rojo"], // la carne ES el plato: rojo sin pasar por la IA
+  ["Alitas de pollo", "vegano", "rojo"],
+  ["Ensalada de tomate", "vegetariano", "dudoso"], // jamón como añadido: la IA puede proponer "sin jamón"
+  ["Bocadillo de calamares", "marisco", "rojo"],
+);
+const platos = [...(data as Plato[]), ...EXTERNOS];
 const icono = { verde: "🟢", amarillo: "🟡", rojo: "🔴", dudoso: "❔" } as const;
 let fallos = 0;
 

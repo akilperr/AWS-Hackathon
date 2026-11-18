@@ -15,7 +15,12 @@ import type { Restriccion } from "@/lib/restricciones";
 
 export type Estado = "verde" | "amarillo" | "rojo" | "dudoso";
 
-export type Conflicto = { ingrediente: string; motivo: string };
+export type Conflicto = {
+  ingrediente: string;
+  motivo: string;
+  /** El ingrediente prohibido ES el plato (está en el núcleo del nombre: "Alitas de pollo") */
+  estructural?: boolean;
+};
 
 export type ResultadoReglas = {
   estado: Estado;
@@ -30,13 +35,13 @@ export type ResultadoReglas = {
 // Vocabulario (en minúsculas y sin tildes; se comparan palabras completas,
 // admitiendo plural en -s/-es; las que acaban en * son prefijos)
 // ---------------------------------------------------------------------------
-const CARNE = ["carne", "ternera", "vaca", "cerdo", "pollo", "cordero", "chorizo", "bacon", "jamon", "guanciale", "panceta", "salchicha", "higado", "chuleton", "solomillo", "chashu", "pato", "foie", "tocino", "morcilla", "pavo", "caldo de cerdo", "caldo de ternera", "caldo de pollo", "caldo de ave", "caracol", "molleja", "callos", "morro", "oreja", "manteca de cerdo", "entrecot", "cochinita", "paletilla", "gelatina", "salami", "pepperoni", "salchichon", "fuet", "chistorra", "sobrasada", "butifarra", "mortadela", "cecina", "lacon", "lomo"];
+const CARNE = ["carne", "ternera", "vaca", "cerdo", "pollo", "cordero", "chorizo", "bacon", "jamon", "guanciale", "panceta", "salchicha", "higado", "chuleton", "solomillo", "chashu", "pato", "foie", "tocino", "morcilla", "pavo", "caldo de cerdo", "caldo de ternera", "caldo de pollo", "caldo de ave", "caracol", "molleja", "callos", "morro", "oreja", "manteca de cerdo", "entrecot", "cochinita", "paletilla", "gelatina", "salami", "pepperoni", "salchichon", "fuet", "chistorra", "sobrasada", "butifarra", "mortadela", "cecina", "lacon", "lomo", "alita", "costilla", "chuleta", "pechuga", "muslo", "carrillera", "rabo", "conejo", "codorniz", "perdiz", "venado", "jabali", "kebab", "shawarma", "pastrami", "secreto iberico", "presa iberica"];
 const PESCADO = ["pescado", "atun", "salmon", "anchoa", "merluza", "corvina", "boqueron", "bacalao", "ventresca", "worcestershire", "sardina", "surimi", "bonito", "dashi", "lubina"];
 const MARISCO = ["marisco", "gamba", "langostino", "pulpo", "calamar", "mejillon", "almeja", "sepia", "cangrejo", "bogavante"];
 const LACTEOS = ["leche", "queso", "nata", "mantequilla", "yogur", "bechamel", "mascarpone", "mozzarella", "parmesano", "pecorino", "ghee", "paneer", "crema agria", "feta", "provolone", "cheddar", "gruyere", "camembert", "roquefort", "comte", "helado", "burrata", "oaxaca"];
 const HUEVO = ["huevo", "yema*", "clara", "mayonesa", "alioli", "bizcocho*"];
 const GLUTEN = ["trigo", "harina", "pan", "pasta", "spaghetti", "trofie", "lasana", "pizza", "masa", "bizcocho*", "galleta", "picatoste*", "rebozad*", "tempura", "cebada", "centeno", "avena", "cuscus", "seitan", "granola", "fideos", "naan", "pita", "brioche", "hojaldre", "filo", "quebrada", "salsa de soja", "ponzu", "teriyaki", "bulgur", "cerveza", "yakisoba"];
-const FRUTOS_SECOS = ["nuez", "nueces", "almendra", "anacardo", "pistacho", "pinon", "pinones", "avellana", "cacahuete", "pesto", "pecana", "macadamia"];
+const FRUTOS_SECOS = ["nuez", "nueces", "almendra", "anacardo", "pistacho", "pinon", "pinones", "avellana", "cacahuete", "pesto", "pecana", "macadamia", "sate", "satay", "praline", "mazapan", "turron", "romesco"];
 const OTROS_ANIMALES = ["miel"];
 
 /** Si el ingrediente contiene una de estas frases, se considera seguro para esa restricción. */
@@ -96,6 +101,16 @@ function buscar(texto: string, palabras: string[]): string | undefined {
 
 const CONTAMINACION = /(compartid|trazas|contaminacion cruzada|mismo aceite|misma freidora)/;
 
+/**
+ * ¿La palabra está en el núcleo del nombre del plato? El núcleo es lo que va
+ * antes de " con ", " y ", " sin ", " al/a la "… → "Alitas de pollo" sí;
+ * "Huevos rotos con chorizo" no (el chorizo es un añadido que se puede quitar).
+ */
+function enNucleo(nombreNormalizado: string, palabra: string) {
+  const nucleo = nombreNormalizado.split(/\s+(?:con|y|sin|al|a la|en|sobre)\s+|[,(·]/)[0];
+  return regex(palabra).test(nucleo);
+}
+
 const VERBOS_RETIRADA = /(quitar|retirar|omitir|sin |aparte|cambiar|al final|se puede pedir|se pueden)/;
 
 /** Nombre corto de un ingrediente: lo que va antes del paréntesis. */
@@ -107,6 +122,7 @@ const cabeza = (ing: string) => ing.split("(")[0].trim();
 export function evaluarPlato(plato: Plato, restricciones: Restriccion[]): ResultadoReglas {
   const ingredientes = plato.ingredientes ?? [];
   const nota = normalizar(plato.nota_cocina ?? "");
+  const nombre = normalizar(plato.nombre);
   const desc = normalizar(`${plato.nombre}. ${plato.descripcion ?? ""}`);
 
   if (restricciones.length === 0) return { estado: "verde", conflictos: [], pistas: [] };
@@ -137,18 +153,39 @@ export function evaluarPlato(plato: Plato, restricciones: Restriccion[]): Result
       if (hit) conflictos.push({ ingrediente: ing, motivo: VOCAB[r].motivo });
     }
 
-    // 2) Alérgenos declarados que no hemos podido atribuir a un ingrediente concreto
+    // 2) Nombre y descripción del plato: en cartas leídas de una foto muchas veces
+    //    son lo único que hay ("Alitas de pollo · con salsa sweet chili").
+    if (r !== "embarazo") {
+      for (const [texto, origen] of [[nombre, "nombre"], [desc, "descripción"]] as const) {
+        if (EXCEPCIONES[r]?.some((x) => texto.includes(x))) continue;
+        const hit = buscar(texto, VOCAB[r].palabras);
+        if (!hit) continue;
+        const base = hit.replace("*", "");
+        if (conflictos.some((c) => normalizar(c.ingrediente).includes(base))) continue; // ya detectado en ingredientes
+        conflictos.push({
+          ingrediente: base,
+          motivo: `${VOCAB[r].motivo} (según ${origen === "nombre" ? "el nombre" : "la descripción"} del plato)`,
+          estructural: origen === "nombre" && enNucleo(nombre, base),
+        });
+      }
+      // Lo prohibido en el núcleo del nombre también es estructural aunque venga de los ingredientes
+      for (const c of conflictos) {
+        if (!c.estructural && VOCAB[r].palabras.some((w) => regex(w).test(normalizar(c.ingrediente)) && enNucleo(nombre, w.replace("*", "")))) c.estructural = true;
+      }
+    }
+
+    // 3) Alérgenos declarados que no hemos podido atribuir a un ingrediente concreto
     const declarados = (ALERGENOS[r] ?? []).filter((a) => plato.alergenos_declarados?.includes(a));
     if (declarados.length && !conflictos.some((c) => c.motivo === VOCAB[r as keyof typeof VOCAB]?.motivo)) {
       conflictos.push({ ingrediente: `alérgeno declarado: ${declarados.join(", ")}`, motivo: `declarado por el restaurante` });
     }
 
-    // 3) Contaminación cruzada en alergias (freidora compartida, trazas…)
+    // 4) Contaminación cruzada en alergias (freidora compartida, trazas…)
     if ((r === "sin_gluten" || r === "frutos_secos" || r === "marisco") && CONTAMINACION.test(nota)) {
       pistas.push(`Alergia (${r}): la nota de cocina indica posible contaminación cruzada: "${plato.nota_cocina}"`);
     }
 
-    // 4) Riesgos de embarazo mencionados solo en descripción / nota de cocina
+    // 5) Riesgos de embarazo mencionados solo en descripción / nota de cocina
     if (r === "embarazo") {
       const enTexto = buscar(`${desc} ${nota}`, EMBARAZO_DUDOSO);
       if (enTexto && !buscar(`${desc} ${nota}`, PASTEURIZADO)) pistas.push(`Embarazo: la descripción/nota menciona '${enTexto.replace("*", "")}'.`);
@@ -178,6 +215,12 @@ export function evaluarPlato(plato: Plato, restricciones: Restriccion[]): Result
       instruccion: `Pedir sin ${lista(quitar)}${resto.length ? ` (${lista(resto.slice(0, 4))} son aptos)` : ""}`,
       pistas: pistas.length ? [...pistas, `Adaptable quitando: ${lista(quitar)}.`] : pistas,
     };
+  }
+
+  // El ingrediente prohibido ES el plato ("Alitas de pollo" para un vegetariano):
+  // rojo sin pasar por la IA, salvo que la nota de cocina ofrezca cambiarlo.
+  if (unicos.some((c) => c.estructural) && !/cambiar|sustitu|en lugar de|version/.test(nota)) {
+    return { estado: "rojo", conflictos: unicos, pistas };
   }
 
   // Modificable pero las reglas no saben si basta → que lo valore la IA
