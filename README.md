@@ -239,6 +239,7 @@ supabase/migrations/       Esquema SQL versionado
 supabase/functions/embed/  Edge Function de embeddings (gte-small)
 supabase/seed.sql          Datos de demo
 scripts/                   Comprobaciones, pruebas, embeddings y comparativa de modelos
+docs/GUION_DEMO.md         Guion para grabar la demo
 ```
 
 ## 6. Despliegue en Vercel

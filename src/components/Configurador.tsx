@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ETIQUETAS, RESTRICCIONES, type Restriccion } from "@/lib/restricciones";
-import { nuevoComensal, PRECIO, type Mesa } from "@/lib/mesa";
+import { borrarMesa, esMesaInicial, guardarMesa, mesaInicial, nuevoComensal, PRECIO, type Mesa } from "@/lib/mesa";
 
 const ICONO: Record<Restriccion, string> = {
   vegetariano: "🥕",
@@ -41,11 +41,52 @@ export function Configurador({ mesa, onChange, onBuscar, modo = "buscar", textoB
     setActivo(resto[0]?.id);
   };
 
+  // Limpiar filtros: vuelve al estado inicial y olvida la mesa guardada.
+  // Se puede deshacer durante unos segundos por si se pulsa sin querer.
+  const [anterior, setAnterior] = useState<Mesa | null>(null);
+  useEffect(() => {
+    if (!anterior) return;
+    const t = setTimeout(() => setAnterior(null), 6000);
+    return () => clearTimeout(t);
+  }, [anterior]);
+
+  const limpiar = () => {
+    const limpia = mesaInicial();
+    setAnterior(mesa);
+    borrarMesa();
+    onChange(limpia);
+    setActivo(limpia.comensales[0].id);
+  };
+
+  const deshacer = () => {
+    if (!anterior) return;
+    guardarMesa(anterior);
+    onChange(anterior);
+    setActivo(anterior.comensales[0]?.id);
+    setAnterior(null);
+  };
+
   return (
     <div className="flex flex-col gap-6 pb-28">
       {/* Comensales */}
+      {anterior && (
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-foreground px-4 py-3 text-sm text-white" role="status">
+          <span>Filtros limpiados</span>
+          <button onClick={deshacer} className="font-semibold text-orange-300">Deshacer</button>
+        </div>
+      )}
+
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">¿Quiénes vais?</h2>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">¿Quiénes vais?</h2>
+          <button
+            onClick={limpiar}
+            disabled={esMesaInicial(mesa)}
+            className="shrink-0 rounded-full border border-line bg-card px-3 py-1 text-sm text-muted transition hover:border-rojo hover:text-rojo disabled:opacity-40 disabled:hover:border-line disabled:hover:text-muted"
+          >
+            ↺ Limpiar filtros
+          </button>
+        </div>
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {mesa.comensales.map((c) => (
             <button

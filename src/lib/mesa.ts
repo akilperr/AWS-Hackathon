@@ -21,6 +21,14 @@ export function guardarMesa(m: Mesa) {
   try { localStorage.setItem(CLAVE, JSON.stringify(m)); } catch { /* sin almacenamiento: no pasa nada */ }
 }
 
+export function borrarMesa() {
+  try { localStorage.removeItem(CLAVE); } catch { /* sin almacenamiento: no pasa nada */ }
+}
+
+/** ¿La mesa está como recién abierta (un comensal sin restricciones, €€, sin preferencias)? */
+export const esMesaInicial = (m: Mesa) =>
+  m.comensales.length === 1 && m.comensales[0].restricciones.length === 0 && m.presupuesto === 2 && !m.preferencias.trim();
+
 export function cargarMesa(): Mesa | null {
   try {
     const raw = localStorage.getItem(CLAVE);
