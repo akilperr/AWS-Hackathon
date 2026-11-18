@@ -8,7 +8,7 @@ import { z } from "zod";
 import { getModel } from "@/lib/ai/model";
 import type { Plato } from "@/lib/supabase/types";
 import type { Perfil } from "@/lib/restricciones";
-import { evaluarPlato, type Conflicto } from "./reglas";
+import { evaluarPlato, normalizar, type Conflicto } from "./reglas";
 
 export type Veredicto = {
   plato_id: string;
@@ -68,6 +68,7 @@ Reglas:
 - Si el riesgo depende de algo que no consta (tipo de caldo, si el queso es pasteurizado, si lleva vino) y NO es una alergia grave, elige amarillo con la pregunta concreta para el camarero ("Preguntar si el caldo es de verduras").
 - Ante una duda real sobre alergias graves (gluten, frutos secos, marisco), elige rojo. La contaminación cruzada (freidora compartida, trazas) cuenta como riesgo real para celíacos y alérgicos.
 - Sé conservador: nunca verde si dudas.
+- "permite_modificacion" se refiere a QUITAR ingredientes. Pedir otro punto de cocción (carne muy hecha, huevo o tortilla bien cuajados) es siempre posible: si ese es el único riesgo, elige amarillo con esa instrucción, aunque permite_modificacion sea false.
 - Si el plato no trae nota_cocina, no sabes qué admite esa cocina: formula la instrucción de los amarillos como pregunta al camarero ("Preguntar si pueden servirlo sin chorizo") y solo cuando retirar el ingrediente sea razonable (guarnición, topping, salsa aparte).`;
 
 /** Casos (plato × comensal) por llamada a la IA; los lotes van en paralelo. */
@@ -119,44 +120,59 @@ export async function auditarCarta(platos: Plato[], perfiles: Perfil[]): Promise
     for (let i = 0; i < dudosos.length; i += TAM_LOTE) lotes.push(dudosos.slice(i, i + TAM_LOTE));
     llamadas = lotes.length;
 
+    /**
+     * Pide a la IA un lote. Cada caso lleva una clave CORTA ("1", "2"…): con los
+     * UUID largos la IA a veces copiaba mal la clave y el caso se perdía.
+     * Devuelve los casos que se han quedado sin respuesta.
+     */
+    const pedirLote = async (lote: Caso[]): Promise<Caso[]> => {
+      const casos = lote.map((d, i) => ({
+        clave: String(i + 1),
+        plato: d.plato.nombre,
+        descripcion: d.plato.descripcion,
+        ingredientes: d.plato.ingredientes,
+        alergenos_declarados: d.plato.alergenos_declarados,
+        permite_modificacion: d.plato.permite_modificacion,
+        nota_cocina: d.plato.nota_cocina,
+        restricciones_comensal: d.perfil.restricciones,
+        conflictos_detectados: d.conflictos,
+        pistas: d.pistas,
+      }));
+      const pedir = () =>
+        generateText({
+          model: getModel(),
+          output: Output.object({ schema: clasificacionIA }),
+          system: PROMPT_IA,
+          prompt: `Clasifica estos ${casos.length} casos. Devuelve exactamente un resultado por cada clave (de "1" a "${casos.length}").\n${JSON.stringify(casos)}`,
+        });
+      try {
+        // Un reintento tras una pausa breve: los fallos suelen ser picos pasajeros
+        const { output } = await pedir().catch(async (e) => {
+          console.warn("[auditoria] lote fallido, se reintenta:", e instanceof Error ? e.message.split("\n")[0] : e);
+          await new Promise((r) => setTimeout(r, 1500));
+          return pedir();
+        });
+        for (const bruto of output.resultados) {
+          const d = lote[Number(bruto.clave.replace(/\D/g, "")) - 1];
+          if (!d) continue;
+          const res = revisarVeredictoIA(d.plato, d.perfil.restricciones, bruto);
+          cache.set(`${d.plato.id}|${[...d.perfil.restricciones].sort().join("+")}`, res);
+          veredictos.set(d.clave, aVeredicto({ plato_id: d.plato.id, plato: d.plato.nombre, categoria: d.plato.categoria, fuente: "ia" }, res));
+        }
+      } catch (e) {
+        console.error("[auditoria] fallo de la IA en un lote:", e);
+      }
+      return lote.filter((d) => !veredictos.has(d.clave));
+    };
+
     await Promise.all(
       lotes.map(async (lote) => {
-        const casos = lote.map((d) => ({
-          clave: d.clave,
-          plato: d.plato.nombre,
-          descripcion: d.plato.descripcion,
-          ingredientes: d.plato.ingredientes,
-          alergenos_declarados: d.plato.alergenos_declarados,
-          permite_modificacion: d.plato.permite_modificacion,
-          nota_cocina: d.plato.nota_cocina,
-          restricciones_comensal: d.perfil.restricciones,
-          conflictos_detectados: d.conflictos,
-          pistas: d.pistas,
-        }));
-        try {
-          const pedir = () =>
-            generateText({
-              model: getModel(),
-              output: Output.object({ schema: clasificacionIA }),
-              system: PROMPT_IA,
-              prompt: `Clasifica estos ${casos.length} casos. Devuelve un resultado por clave.\n${JSON.stringify(casos)}`,
-            });
-          // Un reintento tras una pausa breve: los fallos suelen ser picos pasajeros
-          // (p.ej. varias llamadas en paralelo a la vez); mejor esperar 1-2 s que
-          // marcar platos como "no verificados".
-          const { output } = await pedir().catch(async (e) => {
-            console.warn("[auditoria] lote fallido, se reintenta:", e instanceof Error ? e.message.split("\n")[0] : e);
-            await new Promise((r) => setTimeout(r, 1500));
-            return pedir();
-          });
-          for (const res of output.resultados) {
-            const d = lote.find((x) => x.clave === res.clave);
-            if (!d) continue;
-            cache.set(`${d.plato.id}|${[...d.perfil.restricciones].sort().join("+")}`, res);
-            veredictos.set(d.clave, aVeredicto({ plato_id: d.plato.id, plato: d.plato.nombre, categoria: d.plato.categoria, fuente: "ia" }, res));
-          }
-        } catch (e) {
-          console.error("[auditoria] fallo de la IA en un lote, sus platos se marcan como no recomendados:", e);
+        const faltan = await pedirLote(lote);
+        // Si la IA se ha saltado algún caso, se le vuelven a pedir solo esos
+        if (faltan.length) {
+          llamadas++;
+          console.warn(`[auditoria] la IA no devolvió ${faltan.length} caso(s); se vuelven a pedir`);
+          await pedirLote(faltan);
         }
       }),
     );
@@ -187,6 +203,42 @@ export async function auditarCarta(platos: Plato[], perfiles: Perfil[]): Promise
     encaje_pct: perfiles.length ? Math.round(puntos / perfiles.length) : 100,
     comensales,
     llamadas_ia: llamadas,
+  };
+}
+
+/**
+ * Red de seguridad sobre la IA: las reglas tienen la última palabra.
+ * Se pasan por las reglas los ingredientes que la propia IA ha supuesto; si
+ * aparece algo prohibido que su veredicto no resuelve (dice "verde", o su
+ * instrucción "pedir sin…" no lo menciona), el plato pasa a rojo.
+ * Ej.: "Hamburguesa vegetariana" → la IA supone "pan de hamburguesa" pero solo
+ * propone quitar la ricotta → rojo para sin gluten.
+ */
+function revisarVeredictoIA(
+  plato: Plato,
+  restricciones: Perfil["restricciones"],
+  res: z.infer<typeof clasificacionIA>["resultados"][number],
+): z.infer<typeof clasificacionIA>["resultados"][number] {
+  if (res.estado === "rojo") return res;
+  const conInferidos = { ...plato, ingredientes: [...new Set([...plato.ingredientes, ...res.ingredientes_inferidos])] };
+  const { conflictos } = evaluarPlato(conInferidos, restricciones);
+  const instruccion = normalizar(res.instruccion ?? "");
+  // Se compara por raíces (5 letras): "cuajado" ≈ "cuajada", "cacahuetes" ≈ "cacahuete"
+  const raices = new Set(instruccion.split(/[^a-z]+/).filter((w) => w.length > 3).map((w) => w.slice(0, 5)));
+  const pideCoccion = /bien hech|muy hech|cuajad|bien cocinad|bien frit|hecho del todo/.test(instruccion);
+  const resuelto = (c: Conflicto) =>
+    res.estado === "amarillo" &&
+    !c.estructural &&
+    // Riesgos de cocción en embarazo (yema líquida, poco cuajado, poco hecho) se resuelven pidiéndolo bien hecho
+    ((/embarazo/.test(c.motivo) && /poco|liquid|crud|cuaj/.test(normalizar(c.ingrediente + " " + c.motivo)) && pideCoccion) ||
+      normalizar(c.ingrediente).split(/[^a-z]+/).some((w) => w.length > 3 && raices.has(w.slice(0, 5))));
+  const pendientes = conflictos.filter((c) => !resuelto(c));
+  if (!pendientes.length) return res;
+  return {
+    ...res,
+    estado: "rojo",
+    instruccion: null,
+    motivo: pendientes.map((c) => `${c.ingrediente}: ${c.motivo}`).join("; "),
   };
 }
 

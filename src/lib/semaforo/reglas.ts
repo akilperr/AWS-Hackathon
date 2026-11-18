@@ -40,7 +40,7 @@ const PESCADO = ["pescado", "atun", "salmon", "anchoa", "merluza", "corvina", "b
 const MARISCO = ["marisco", "gamba", "langostino", "pulpo", "calamar", "mejillon", "almeja", "sepia", "cangrejo", "bogavante"];
 const LACTEOS = ["leche", "queso", "nata", "mantequilla", "yogur", "bechamel", "mascarpone", "mozzarella", "parmesano", "pecorino", "ghee", "paneer", "crema agria", "feta", "provolone", "cheddar", "gruyere", "camembert", "roquefort", "comte", "helado", "burrata", "oaxaca"];
 const HUEVO = ["huevo", "yema*", "clara", "mayonesa", "alioli", "bizcocho*"];
-const GLUTEN = ["trigo", "harina", "pan", "pasta", "spaghetti", "trofie", "lasana", "pizza", "masa", "bizcocho*", "galleta", "picatoste*", "rebozad*", "tempura", "cebada", "centeno", "avena", "cuscus", "seitan", "granola", "fideos", "naan", "pita", "brioche", "hojaldre", "filo", "quebrada", "salsa de soja", "ponzu", "teriyaki", "bulgur", "cerveza", "yakisoba"];
+const GLUTEN = ["trigo", "harina", "pan", "pasta", "spaghetti", "trofie", "lasana", "pizza", "masa", "bizcocho*", "galleta", "picatoste*", "rebozad*", "tempura", "cebada", "centeno", "avena", "cuscus", "seitan", "granola", "fideos", "naan", "pita", "brioche", "hojaldre", "filo", "quebrada", "salsa de soja", "ponzu", "teriyaki", "bulgur", "cerveza", "yakisoba", "hamburguesa", "bocadillo", "sandwich", "montadito", "tosta", "empanada", "empanadilla", "croissant", "bollo", "molde"];
 const FRUTOS_SECOS = ["nuez", "nueces", "almendra", "anacardo", "pistacho", "pinon", "pinones", "avellana", "cacahuete", "pesto", "pecana", "macadamia", "sate", "satay", "praline", "mazapan", "turron", "romesco"];
 const OTROS_ANIMALES = ["miel"];
 

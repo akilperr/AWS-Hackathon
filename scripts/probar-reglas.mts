@@ -44,12 +44,14 @@ const EXTERNOS = [
   externo("Alitas de pollo", "con salsa sweet chili y paté saté"),
   externo("Ensalada de tomate", "aguacate, aceite de aceituna, jamón ibérico y albahaca"),
   externo("Bocadillo de calamares", null),
+  externo("Hamburguesa vegetariana", "Ricota, tomate kétchup y mézclum"),
 ];
 CASOS.push(
   ["Alitas de pollo", "vegetariano", "rojo"], // la carne ES el plato: rojo sin pasar por la IA
   ["Alitas de pollo", "vegano", "rojo"],
   ["Ensalada de tomate", "vegetariano", "dudoso"], // jamón como añadido: la IA puede proponer "sin jamón"
   ["Bocadillo de calamares", "marisco", "rojo"],
+  ["Hamburguesa vegetariana", "sin_gluten", "rojo"], // el pan de hamburguesa lleva trigo
 );
 const platos = [...(data as Plato[]), ...EXTERNOS];
 const icono = { verde: "🟢", amarillo: "🟡", rojo: "🔴", dudoso: "❔" } as const;

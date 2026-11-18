@@ -218,6 +218,8 @@ Comparamos 8 modelos en las 3 tareas de la app, con 2 repeticiones. **A**: semá
 | Amazon Nova Pro | 12 s | 78 % | 1 | 17 s | 4,6 s |
 | Gemini 3.5 Flash | — | — | — | — | — (cuota gratuita agotada) |
 
+Tras las mejoras posteriores (las reglas revisan el nombre del plato y los ingredientes que supone la IA, y las claves de los casos son cortas para que la IA no las copie mal), **Claude Sonnet 5.5 acierta 24 de 24 casos del semáforo en unos 10 s**.
+
 \* *Error peligroso*: marcar 🟢 un plato que no es apto (p. ej. los Nova dieron por bueno el rabo de toro, cuya salsa suele llevar harina, a una persona celíaca). En una app de alergias, un solo error así descarta el modelo, por rápido que sea.
 
 ### Estructura del repo

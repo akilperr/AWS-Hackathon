@@ -134,6 +134,8 @@ async function pruebaSemaforo() {
   const aciertos = filas.filter(({ c, v }) => v && c.ok.includes(v.estado)).length;
   const peligrosos = filas.filter(({ c, v }) => v?.estado === "verde" && !c.ok.includes("verde"));
   const conservador = filas.filter(({ c, v }) => c.ok.includes("verde") && v && v.estado !== "verde").length;
+  if (process.env.BENCH_DETALLE) for (const { c, v } of filas.filter(({ c, v }) => v && !c.ok.includes(v.estado)))
+    console.log(`    ✗ ${c.plato} / ${c.r}: ${v!.estado} (esperado ${c.ok.join(" o ")}) · ${v!.instruccion ?? v!.motivo ?? ""}`);
   return { tiempo: seg(t), aciertos, total: filas.length, peligrosos: peligrosos.map(({ c }) => `${c.plato}/${c.r}`), conservador, sinVeredictoIA };
 }
 
