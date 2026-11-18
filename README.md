@@ -174,10 +174,11 @@ cp .env.example .env.local     # rellenar (ver comentarios dentro del archivo)
 
 **Base de datos.** En Supabase, abre **SQL Editor → New query** y ejecuta, por este orden:
 1. [`supabase/migrations/0001_esquema_inicial.sql`](supabase/migrations/0001_esquema_inicial.sql): tablas, función y seguridad.
-2. [`supabase/seed.sql`](supabase/seed.sql): 12 restaurantes ficticios de Madrid con 72 platos de prueba.
-3. [`supabase/migrations/0002_busqueda_semantica.sql`](supabase/migrations/0002_busqueda_semantica.sql): índices vectoriales y función de búsqueda por significado.
+2. [`supabase/seed.sql`](supabase/seed.sql): 12 restaurantes ficticios en el centro de Madrid con 72 platos.
+3. [`supabase/seed_ampliacion.sql`](supabase/seed_ampliacion.sql): 81 platos más (unos 13 por restaurante), con ingredientes ocultos pensados para poner a prueba el semáforo. No borra nada y se puede repetir.
+4. [`supabase/migrations/0002_busqueda_semantica.sql`](supabase/migrations/0002_busqueda_semantica.sql): índices vectoriales y función de búsqueda por significado.
 
-**Búsqueda semántica (opcional; sin ella se busca por palabras).** En Supabase, **Edge Functions → Deploy a new function → Via Editor**, con nombre `embed`. Sustituye la plantilla por el código de [`supabase/functions/embed/index.ts`](supabase/functions/embed/index.ts). Solo acepta la clave secreta, así que únicamente la puede llamar el servidor. Después calcula los embeddings con `npm run embeddings`. Hay que volver a ejecutarlo cuando se añadan restaurantes o platos.
+**Búsqueda semántica (opcional; sin ella se busca por palabras).** En Supabase, **Edge Functions → Deploy a new function → Via Editor**, con nombre `embed`. Sustituye la plantilla por el código de [`supabase/functions/embed/index.ts`](supabase/functions/embed/index.ts). Solo acepta la clave secreta, así que únicamente la puede llamar el servidor. Después calcula los embeddings con `npm run embeddings`. Hay que volver a ejecutarlo cuando se añadan restaurantes o platos (con `-- --todos` si cambian platos de restaurantes que ya existían, porque la ficha de cada restaurante incluye sus platos).
 
 > **Limitación conocida:** `gte-small` está entrenado sobre todo en inglés. Acierta muy bien con conceptos concretos ("ramen" encuentra Sushi Kaze por su *Ramen tonkotsu*; "quesos franceses", Le Petit Fromage), pero flojea con expresiones muy españolas o abstractas ("comida de cuchara"). El agente lo compensa porque lee las descripciones antes de recomendar.
 

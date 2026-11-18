@@ -35,7 +35,10 @@ export type AuditoriaComensal = {
 };
 
 export type AuditoriaGrupo = {
-  /** % de comensales que tienen al menos un principal apto. */
+  /**
+   * Encaje del grupo (0-100): media por comensal de 100 si tiene algún principal
+   * apto (o adaptable), 50 si solo puede tomar entrantes/postres y 0 si nada.
+   */
   encaje_pct: number;
   comensales: AuditoriaComensal[];
   llamadas_ia: number;
@@ -67,7 +70,7 @@ Reglas:
 - Si el plato no trae nota_cocina, no sabes qué admite esa cocina: formula la instrucción de los amarillos como pregunta al camarero ("Preguntar si pueden servirlo sin chorizo") y solo cuando retirar el ingrediente sea razonable (guarnición, topping, salsa aparte).`;
 
 /** Casos (plato × comensal) por llamada a la IA; los lotes van en paralelo. */
-const TAM_LOTE = 8;
+const TAM_LOTE = 5;
 
 /** Caché en memoria para no repetir llamadas idénticas (útil en la demo). */
 const cache = new Map<string, z.infer<typeof clasificacionIA>["resultados"][number]>();
@@ -169,9 +172,9 @@ export async function auditarCarta(platos: Plato[], perfiles: Perfil[]): Promise
     };
   });
 
-  const cubiertos = comensales.filter((c) => c.cubierto).length;
+  const puntos = comensales.reduce((n, c) => n + (c.cubierto ? 100 : c.verdes.length + c.amarillos.length > 0 ? 50 : 0), 0);
   return {
-    encaje_pct: perfiles.length ? Math.round((100 * cubiertos) / perfiles.length) : 100,
+    encaje_pct: perfiles.length ? Math.round(puntos / perfiles.length) : 100,
     comensales,
     llamadas_ia: llamadas,
   };

@@ -30,18 +30,18 @@ export type ResultadoReglas = {
 // Vocabulario (en minúsculas y sin tildes; se comparan palabras completas,
 // admitiendo plural en -s/-es; las que acaban en * son prefijos)
 // ---------------------------------------------------------------------------
-const CARNE = ["carne", "ternera", "vaca", "cerdo", "pollo", "cordero", "chorizo", "bacon", "jamon", "guanciale", "panceta", "salchicha", "higado", "chuleton", "solomillo", "chashu", "pato", "foie", "tocino", "morcilla", "pavo", "caldo de cerdo", "caldo de ternera", "caldo de pollo"];
-const PESCADO = ["pescado", "atun", "salmon", "anchoa", "merluza", "corvina", "boqueron", "bacalao", "ventresca", "worcestershire", "sardina"];
+const CARNE = ["carne", "ternera", "vaca", "cerdo", "pollo", "cordero", "chorizo", "bacon", "jamon", "guanciale", "panceta", "salchicha", "higado", "chuleton", "solomillo", "chashu", "pato", "foie", "tocino", "morcilla", "pavo", "caldo de cerdo", "caldo de ternera", "caldo de pollo", "caldo de ave", "caracol", "molleja", "callos", "morro", "oreja", "manteca de cerdo", "entrecot", "cochinita", "paletilla", "gelatina", "salami", "pepperoni", "salchichon", "fuet", "chistorra", "sobrasada", "butifarra", "mortadela", "cecina", "lacon", "lomo"];
+const PESCADO = ["pescado", "atun", "salmon", "anchoa", "merluza", "corvina", "boqueron", "bacalao", "ventresca", "worcestershire", "sardina", "surimi", "bonito", "dashi", "lubina"];
 const MARISCO = ["marisco", "gamba", "langostino", "pulpo", "calamar", "mejillon", "almeja", "sepia", "cangrejo", "bogavante"];
 const LACTEOS = ["leche", "queso", "nata", "mantequilla", "yogur", "bechamel", "mascarpone", "mozzarella", "parmesano", "pecorino", "ghee", "paneer", "crema agria", "feta", "provolone", "cheddar", "gruyere", "camembert", "roquefort", "comte", "helado", "burrata", "oaxaca"];
 const HUEVO = ["huevo", "yema*", "clara", "mayonesa", "alioli", "bizcocho*"];
-const GLUTEN = ["trigo", "harina", "pan", "pasta", "spaghetti", "trofie", "lasana", "pizza", "masa", "bizcocho*", "galleta", "picatoste*", "rebozad*", "tempura", "cebada", "centeno", "avena", "cuscus", "seitan", "granola", "fideos", "naan", "pita", "brioche", "hojaldre", "filo", "quebrada", "salsa de soja", "ponzu", "teriyaki"];
+const GLUTEN = ["trigo", "harina", "pan", "pasta", "spaghetti", "trofie", "lasana", "pizza", "masa", "bizcocho*", "galleta", "picatoste*", "rebozad*", "tempura", "cebada", "centeno", "avena", "cuscus", "seitan", "granola", "fideos", "naan", "pita", "brioche", "hojaldre", "filo", "quebrada", "salsa de soja", "ponzu", "teriyaki", "bulgur", "cerveza", "yakisoba"];
 const FRUTOS_SECOS = ["nuez", "nueces", "almendra", "anacardo", "pistacho", "pinon", "pinones", "avellana", "cacahuete", "pesto", "pecana", "macadamia"];
 const OTROS_ANIMALES = ["miel"];
 
 /** Si el ingrediente contiene una de estas frases, se considera seguro para esa restricción. */
 const EXCEPCIONES: Partial<Record<Restriccion, string[]>> = {
-  sin_gluten: ["sin gluten", "harina de arroz", "harina de almendra", "harina de maiz", "tortilla de maiz", "fideos de arroz", "arroz glutinoso"],
+  sin_gluten: ["sin gluten", "harina de arroz", "harina de almendra", "harina de maiz", "harina de garbanzo", "tortilla de maiz", "fideos de arroz", "arroz glutinoso", "totopos de maiz"],
   sin_lactosa: ["leche de coco", "queso vegano", "sin lactosa", "leche de avena", "leche de soja"],
   vegano: ["mayonesa vegana", "queso vegano", "leche de coco", "leche de avena", "leche de soja"],
 };
@@ -49,7 +49,7 @@ const EXCEPCIONES: Partial<Record<Restriccion, string[]>> = {
 /** Riesgos de embarazo que, presentes en los INGREDIENTES, son rojo directo. */
 const EMBARAZO_ROJO = ["crudo", "cruda", "crudas", "crudos", "leche cruda", "sin pasteurizar", "lait cru", "poco cocinad*", "poco cuajad*", "yema liquida", "yema cruda", "yemas crudas", "huevo crudo", "mayonesa", "alioli", "pate", "higado", "foie", "roquefort", "camembert", "salmon ahumado", "tartar", "ceviche", "licor", "amaretto", "conac", "ron", "whisky", "brandy"];
 /** Riesgos que dependen de la elaboración → dudoso, lo valora la IA. */
-const EMBARAZO_DUDOSO = ["vino", "cerveza", "chorizo", "jamon", "guanciale", "salami", "embutido", "queso fresco", "brie", "oaxaca", "feta", "sin confirmar", "consultar", "poco hecho", "poco hecha", "marinad*", ...EMBARAZO_ROJO];
+const EMBARAZO_DUDOSO = ["vino", "cerveza", "escalfad*", "cotija", "chorizo", "jamon", "guanciale", "salami", "embutido", "queso fresco", "brie", "oaxaca", "feta", "sin confirmar", "consultar", "poco hecho", "poco hecha", "marinad*", ...EMBARAZO_ROJO];
 const PASTEURIZADO = ["pasteurizad"];
 
 /** Alérgenos declarados que bastan para marcar conflicto por restricción. */

@@ -47,7 +47,7 @@ export function CartaSemaforo({ auditoria, platos, titulo, subtitulo, onConfirma
           {!titulo && auditoria.comensales.length > 1 && <p className="text-sm text-muted">Encaje de la mesa</p>}
         </div>
         {auditoria.comensales.length > 1 && (
-          <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold text-white ${color}`} title="Comensales con al menos un principal apto">
+          <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold text-white ${color}`} title="100 % = todos tienen un principal apto; quien solo puede tomar entrantes o postres cuenta la mitad">
             {auditoria.encaje_pct}%
           </span>
         )}

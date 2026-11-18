@@ -408,7 +408,7 @@ function Tarjeta({ auditoria: a, candidato: c, experiencia: e, nota, distanciaKm
               <p className="mt-1 text-sm font-medium text-brand">📍 {c.direccion.replace(/, Madrid$/, "")} · Ver en el mapa</p>
             )}
           </div>
-          <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold text-white ${color}`} title="Encaje del grupo">
+          <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold text-white ${color}`} title="100 % = todos tienen un principal apto; quien solo puede tomar entrantes o postres cuenta la mitad">
             {a.encaje_pct}%
           </span>
         </button>

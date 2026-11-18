@@ -24,6 +24,15 @@ const CASOS: [string, Restriccion, string][] = [
   ["Patatas bravas", "embarazo", "dudoso"], // alioli casero (huevo crudo), retirable según la nota → lo confirma la IA
   ["Ensaladilla rusa", "embarazo", "rojo"],
   ["Falafel con salsa de yogur", "sin_gluten", "dudoso"], // freidora compartida con trigo
+  // Ingredientes ocultos (ampliación de cartas)
+  ["Pizza diavola", "vegetariano", "amarillo"], // salami → pedir sin salami
+  ["Panna cotta con frutos rojos", "vegetariano", "rojo"], // gelatina animal
+  ["Sopa de miso", "vegetariano", "rojo"], // dashi = caldo de bonito
+  ["Lasaña de verduras", "frutos_secos", "rojo"], // crema de anacardos
+  ["Uramaki California", "marisco", "rojo"], // surimi con crustáceo
+  ["Pad thai de tofu", "frutos_secos", "amarillo"], // pedir sin cacahuetes
+  ["Enchiladas de pollo con mole", "frutos_secos", "rojo"], // mole con cacahuete y almendra
+  ["Escargots à la bourguignonne", "vegetariano", "rojo"], // caracoles
 ];
 
 const { data } = await supabaseServer().from("platos").select("*");
