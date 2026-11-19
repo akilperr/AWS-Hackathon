@@ -4,6 +4,12 @@
 
 **🔗 Demo en vivo: [aws-hackathon-wine.vercel.app](https://aws-hackathon-wine.vercel.app)** (pensada para el móvil)
 
+### 🎬 Vídeo de la demo
+
+[![Ver el vídeo de la demo de Agent Locally en YouTube](docs/portada_video.png)](https://youtu.be/CPE4mD5u2TQ)
+
+▶️ [Ver en YouTube](https://youtu.be/CPE4mD5u2TQ) (con subtítulos)
+
 Proyecto del **Seminario & Hackathon de Agentes de IA en AWS · UC3M**.
 Equipo: Sergio Brigidano · Lucía Liu Wang · Carlos Velázquez.
 Documento de diseño completo: [`SEMINARIO AWS.pdf`](./SEMINARIO%20AWS.pdf).
