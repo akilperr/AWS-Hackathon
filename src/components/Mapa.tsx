@@ -49,8 +49,33 @@ function AjusteTamano({ onCambio }: { onCambio: () => void }) {
       if (Date.now() - creado < 4000) onCambio();
     });
     obs.observe(map.getContainer());
-    return () => obs.disconnect();
+
+    // Encuadrar de nuevo la primera vez que el mapa se ve en pantalla (en móvil
+    // suele estar más abajo y el navegador puede haber cambiado de tamaño entre medias)
+    const visible = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      map.invalidateSize();
+      onCambio();
+      visible.disconnect();
+    }, { threshold: 0.5 });
+    visible.observe(map.getContainer());
+
+    return () => { obs.disconnect(); visible.disconnect(); };
   }, [map, onCambio]);
+  return null;
+}
+
+/**
+ * En pantallas táctiles el mapa no se arrastra con un dedo hasta que se activa:
+ * si no, al deslizar la página por encima del mapa se movía el mapa (y acababa
+ * en Tres Cantos) en lugar de bajar por la página.
+ */
+function ArrastreTactil({ permitido }: { permitido: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (permitido) map.dragging.enable();
+    else map.dragging.disable();
+  }, [map, permitido]);
   return null;
 }
 
@@ -87,9 +112,12 @@ export default function Mapa({ puntos, yo, nombreYo = "Estás aquí", enfocar, o
   const marcadores = useRef<Record<string, L.Marker>>({});
   const [version, setVersion] = useState(0);
   const reencuadrar = useCallback(() => setVersion((v) => v + 1), []);
+  // Este componente solo se carga en el navegador (dynamic + ssr:false), así que window existe
+  const [tactil] = useState(() => window.matchMedia("(pointer: coarse)").matches);
+  const [activo, setActivo] = useState(false);
   return (
-    <div className={`${alto} overflow-hidden rounded-2xl border border-line`}>
-      <MapContainer center={[40.4168, -3.7038]} zoom={12} scrollWheelZoom className="h-full w-full">
+    <div className={`${alto} relative overflow-hidden rounded-2xl border border-line`}>
+      <MapContainer center={[40.4168, -3.7038]} zoom={12} scrollWheelZoom={!tactil} className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -127,8 +155,29 @@ export default function Mapa({ puntos, yo, nombreYo = "Estás aquí", enfocar, o
           </Marker>
         )}
         <AjusteTamano onCambio={reencuadrar} />
+        <ArrastreTactil permitido={!tactil || activo} />
         <Encuadre puntos={puntos} yo={yo} enfocar={enfocar} marcadores={marcadores} version={version} />
       </MapContainer>
+
+      {/* Volver a encuadrar Sol y los restaurantes */}
+      <button
+        onClick={reencuadrar}
+        className="absolute right-2.5 top-2.5 z-[800] rounded-lg border border-black/20 bg-white px-2.5 py-1.5 text-xs font-semibold text-foreground shadow-sm"
+        aria-label="Centrar el mapa"
+      >
+        ⌖ Centrar
+      </button>
+
+      {/* Móvil: el mapa no captura el dedo hasta que se toca, para poder bajar por la página */}
+      {tactil && !activo && (
+        <button
+          onClick={() => setActivo(true)}
+          className="absolute inset-0 z-[650] flex items-end justify-center bg-transparent pb-4"
+          aria-label="Activar el mapa para moverlo"
+        >
+          <span className="rounded-full bg-foreground/80 px-4 py-2 text-sm font-medium text-white shadow">👆 Toca para mover el mapa</span>
+        </button>
+      )}
     </div>
   );
 }
