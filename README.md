@@ -2,6 +2,8 @@
 
 > Un agente de IA que lee la carta por ti y te dice **qué plato puede pedir cada persona de la mesa**, incluso cuando hay celíacos, veganos, alergias o un embarazo en el mismo grupo.
 
+**🔗 Demo en vivo: [aws-hackathon-wine.vercel.app](https://aws-hackathon-wine.vercel.app)** (pensada para el móvil)
+
 Proyecto del **Seminario & Hackathon de Agentes de IA en AWS · UC3M**.
 Equipo: Sergio Brigidano · Lucía Liu Wang · Carlos Velázquez.
 Documento de diseño completo: [`SEMINARIO AWS.pdf`](./SEMINARIO%20AWS.pdf).
