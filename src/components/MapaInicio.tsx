@@ -11,7 +11,7 @@ import type { PuntoMapa } from "./Mapa";
 
 const Mapa = dynamic(() => import("./Mapa"), {
   ssr: false,
-  loading: () => <div className="h-80 animate-pulse rounded-2xl bg-line md:h-[20rem]" />,
+  loading: () => <div className="h-80 animate-pulse rounded-2xl bg-line md:h-[23rem]" />,
 });
 
 type Fila = Pick<Restaurante, "id" | "nombre" | "tipo_cocina" | "rango_precio" | "direccion" | "latitud" | "longitud">;
@@ -51,7 +51,7 @@ export function MapaInicio() {
     <section className="flex min-w-0 flex-col gap-3 md:gap-2">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold">Restaurantes cerca de {UBICACION.nombre.replace("Puerta del ", "")}</h2>
+          <h2 className="text-lg font-bold md:text-xl">Restaurantes cerca de {UBICACION.nombre.replace("Puerta del ", "")}</h2>
           <p className="text-sm text-muted">Pulsa un pin para ver su carta completa.</p>
         </div>
         {lista && <span className="shrink-0 rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">{lista.length} locales</span>}
@@ -64,10 +64,10 @@ export function MapaInicio() {
           nombreYo={UBICACION.nombre}
           onSeleccionar={(id) => router.push(`/restaurante/${id}`)}
           textoAccion="📋 Ver su carta →"
-          alto="h-80 md:h-[20rem]"
+          alto="h-80 md:h-[23rem]"
         />
       ) : (
-        <div className="h-80 animate-pulse rounded-2xl bg-line md:h-[20rem]" />
+        <div className="h-80 animate-pulse rounded-2xl bg-line md:h-[23rem]" />
       )}
 
       {/* Los mismos restaurantes en carrusel, por si se prefiere no usar el mapa */}
