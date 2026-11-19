@@ -51,6 +51,20 @@ body {
 .texto-agente h1, .texto-agente h2, .texto-agente h3 { font-weight: 600; margin: 0.8rem 0 0.3rem; }
 .texto-agente em { color: var(--muted); }
 
+/* Safari dibuja su propio triángulo en <summary> si se usa list-none: lo ocultamos */
+summary.list-none::-webkit-details-marker { display: none; }
+
+/* Tres puntitos de "el agente está escribiendo" */
+.punto-escribiendo {
+  width: 8px; height: 8px; border-radius: 999px; background: var(--muted);
+  animation: punto-escribiendo 1s infinite ease-in-out;
+}
+@keyframes punto-escribiendo {
+  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) { .punto-escribiendo { animation: none; opacity: 0.6; } }
+
 /* Pines del mapa (Leaflet divIcon) */
 .pin {
   display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;

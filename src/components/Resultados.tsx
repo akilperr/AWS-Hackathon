@@ -93,8 +93,10 @@ export function Resultados({ mesa, onEditar }: { mesa: Mesa; onEditar: () => voi
   const recomendados = hayRecomendacion ? ranking.filter((a) => respuesta.orden.includes(norm(a.restaurante ?? ""))) : ranking;
   const descartados = hayRecomendacion ? ranking.filter((a) => !respuesta.orden.includes(norm(a.restaurante ?? ""))) : [];
 
-  // Candidatos que el agente no ha auditado, del más cercano al más lejano
-  const otros = trabajando
+  // Candidatos que el agente no ha auditado, del más cercano al más lejano.
+  // Solo se ocultan durante la PRIMERA búsqueda; si se ocultaran también en las
+  // respuestas de seguimiento, la página se acortaría de golpe y "saltaría".
+  const otros = trabajando && asistente.length <= 1
     ? []
     : [...datos.candidatos.values()]
         .filter((c) => !datos.auditorias.has(c.id))
@@ -110,6 +112,23 @@ export function Resultados({ mesa, onEditar }: { mesa: Mesa; onEditar: () => voi
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [idsPuntos],
   );
+
+  // Conversación de seguimiento: indicador "escribiendo" y bajar hasta lo último
+  const ultimo = messages[messages.length - 1];
+  const textoUltimo = ultimo?.role === "assistant" ? textoDe(ultimo) : "";
+  const escribiendo = trabajando && seguimiento.length > 0 && (ultimo?.role === "user" || !textoUltimo);
+  const herramientaEnCurso = ultimo?.role === "assistant"
+    ? ultimo.parts.find((p) => p.type.startsWith("tool-") && (p as { state?: string }).state !== "output-available")?.type
+    : undefined;
+  const etiquetaEscribiendo =
+    herramientaEnCurso === "tool-auditar_carta_grupo" ? "Revisando cartas…"
+    : herramientaEnCurso === "tool-buscar_candidatos" ? "Buscando restaurantes…"
+    : herramientaEnCurso === "tool-registrar_feedback_eleccion" ? "Guardando vuestra elección…"
+    : undefined;
+  const finConversacion = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (seguimiento.length) finConversacion.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [seguimiento.length, textoUltimo.length, escribiendo]);
 
   const enviar = (t: string) => {
     if (!t.trim() || trabajando) return;
@@ -237,10 +256,16 @@ export function Resultados({ mesa, onEditar }: { mesa: Mesa; onEditar: () => voi
 
             {/* El resto de restaurantes del presupuesto, sin auditar: se puede abrir su carta igualmente */}
             {otros.length > 0 && (
-              <div className="mt-2 flex flex-col gap-2">
-                <h3 className="px-1 text-sm font-semibold uppercase tracking-wide text-muted">
-                  {ranking.length ? "Más restaurantes en vuestro presupuesto" : "Restaurantes en vuestro presupuesto"}
-                </h3>
+              <details
+                key={`otros-${destacado}`}
+                open={(!ranking.length && !trabajando) || otros.some((c) => c.id === destacado) || undefined}
+                className="group rounded-2xl border border-line bg-card"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-muted">
+                  <span>{ranking.length ? "Más restaurantes en vuestro presupuesto" : "Restaurantes en vuestro presupuesto"} ({otros.length})</span>
+                  <span className="transition group-open:rotate-180" aria-hidden>▾</span>
+                </summary>
+                <div className="flex flex-col gap-2 border-t border-line p-3">
                 {otros.map((c) => (
                   <div key={c.id} id={`r-${c.id}`}
                     className={`flex items-center gap-3 rounded-2xl border bg-card p-3 ${destacado === c.id ? "border-brand ring-2 ring-brand/30" : "border-line"}`}>
@@ -255,7 +280,8 @@ export function Resultados({ mesa, onEditar }: { mesa: Mesa; onEditar: () => voi
                     <Link href={`/restaurante/${c.id}`} className="shrink-0 rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-medium text-brand">Ver carta</Link>
                   </div>
                 ))}
-              </div>
+                </div>
+              </details>
             )}
             </>
           )}
@@ -289,6 +315,10 @@ export function Resultados({ mesa, onEditar }: { mesa: Mesa; onEditar: () => voi
           </div>
         ) : null,
       )}
+
+      {/* "Escribiendo…" mientras el agente prepara la respuesta de seguimiento */}
+      {escribiendo && <Escribiendo etiqueta={etiquetaEscribiendo} />}
+      <div ref={finConversacion} aria-hidden />
 
       {/* Caja para seguir hablando con el agente */}
       <form
@@ -552,6 +582,20 @@ function parsearRespuesta(texto: string) {
   // Sin bloques "###": el agente no siguió el formato → mostrarlo completo
   if (bloques.length === 0 && resumen.length > 300) return { resumen: "", notas, orden, aviso, resto: resumen };
   return { resumen, notas, orden, aviso, resto: "" };
+}
+
+/** Burbuja con los tres puntitos de "está escribiendo". */
+function Escribiendo({ etiqueta }: { etiqueta?: string }) {
+  return (
+    <div className="mr-auto flex items-center gap-3 rounded-2xl rounded-bl-sm border border-line bg-card px-4 py-3" role="status" aria-label="El agente está escribiendo">
+      <span className="flex gap-1" aria-hidden>
+        <span className="punto-escribiendo" />
+        <span className="punto-escribiendo [animation-delay:150ms]" />
+        <span className="punto-escribiendo [animation-delay:300ms]" />
+      </span>
+      {etiqueta && <span className="text-sm text-muted">{etiqueta}</span>}
+    </div>
+  );
 }
 
 const Spinner = () => <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-brand align-middle" aria-hidden />;
