@@ -43,3 +43,6 @@ next-env.d.ts
 
 #demo
 /docs/GUION_DEMO.md
+
+#img
+/img/
